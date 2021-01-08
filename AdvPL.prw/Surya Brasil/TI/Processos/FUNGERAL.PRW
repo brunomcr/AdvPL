@@ -631,7 +631,7 @@ Return
 ***********************************************
 */ 
 //Função para enviar email
-User Function SBENVMAIL(_pcOrigem,_pcDestino,_pcSubject,_pcBody,_pcArquivo,_plAutomatico,_pcBcc,_cAccount,_cPassword)
+User Function SBENVMAIL(_pcOrigem,_pcDestino,_pcSubject,_pcBody,_pcArq,_plAutomatico,_pcBcc,_cAccount,_cPassword)
 // Variaveis da funcao
 //**************************************************************
 
@@ -671,8 +671,8 @@ If _pcBody == NIL
 	_pcBody := "Sem Body (ENVMAIL)"
 EndIf
 
-If _pcArquivo == NIL
-	_pcArquivo := ""
+If _pcArq == NIL
+	_pcArq := ""
 EndIf
 
 For _nAux := 1 To 10
@@ -688,7 +688,7 @@ if left(_pcOrigem,1) == ";"
 endif
 // Executa a funcao, mostrando a tela de envio (.T.) ou nao (.F.)
 //**************************************************************
-	_lEnviado := U_EnvEmail(_pcOrigem,_pcDestino,_pcSubject,_pcBody,_pcArquivo,_plAutomatico,_pcBcc,_cAccount,_cPassword)
+	_lEnviado := U_EnvEmail(_pcOrigem,_pcDestino,_pcSubject,_pcBody,_pcArq,_plAutomatico,_pcBcc,_cAccount,_cPassword)
 	
 Return _lEnviado
 
@@ -746,16 +746,16 @@ For _nTentativas := 1 To _nTentMax
           	Return ( .f. )
      	EndIf
 		If Empty(_pcBcc)
-			If Empty(_pcArquivo)
+			If Empty(aAnexos)
 				SEND MAIL FROM _pcOrigem TO _pcDestino SUBJECT _pcSubject BODY _pcBody FORMAT TEXT RESULT _lEnviado
 			Else
-				SEND MAIL FROM _pcOrigem TO _pcDestino SUBJECT _pcSubject BODY _pcBody ATTACHMENT _pcArquivo FORMAT TEXT RESULT _lEnviado
+				SEND MAIL FROM _pcOrigem TO _pcDestino SUBJECT _pcSubject BODY _pcBody ATTACHMENT aAnexos FORMAT TEXT RESULT _lEnviado
 			EndIf
 		Else
-			If Empty(_pcArquivo)
+			If Empty(aAnexos)
 				SEND MAIL FROM _pcOrigem TO _pcDestino BCC _pcBcc SUBJECT _pcSubject BODY _pcBody FORMAT TEXT RESULT _lEnviado
 			Else
-				SEND MAIL FROM _pcOrigem TO _pcDestino BCC _pcBcc SUBJECT _pcSubject BODY _pcBody ATTACHMENT _pcArquivo FORMAT TEXT RESULT _lEnviado
+				SEND MAIL FROM _pcOrigem TO _pcDestino BCC _pcBcc SUBJECT _pcSubject BODY _pcBody ATTACHMENT aAnexos FORMAT TEXT RESULT _lEnviado
 			EndIf
 		EndIf
 		DISCONNECT SMTP SERVER
@@ -763,85 +763,17 @@ For _nTentativas := 1 To _nTentMax
 	
 	If _lEnviado .Or. _cTime <= (Val(Substr(Time(),1,2))*60*60)+(Val(Substr(Time(),4,2))*60)+Val(Substr(Time(),7,2))
 		_nTentativas := _nTentMax
-	EndIf/*
-	oMsg := TMailMessage():New()
-    oMsg:Clear()
-	//Define os atributos da mensagem
-	oMsg:cFrom    := _pcOrigem
-	oMsg:cTo      := _pcDestino
-	oMsg:cSubject := _pcSubject
-	oMsg:cBody    := _pcBody
-	//Percorre os anexos
-	For nAtual := 1 To Len(aAnexos)
-		//Se o arquivo existir
-		If File(aAnexos[nAtual])
-
-			//Anexa o arquivo na mensagem de e-Mail
-			nRet := oMsg:AttachFile(aAnexos[nAtual])
-			If nRet < 0
-				cLog += "002 - Nao foi possivel anexar o arquivo '"+aAnexos[nAtual]+"'!" + CRLF
-			EndIf
-
-		//Senao, acrescenta no log
-		Else
-			cLog += "003 - Arquivo '"+aAnexos[nAtual]+"' nao encontrado!" + CRLF
-		EndIf
-	Next
-	//Cria servidor para disparo do e-Mail
-	oSrv := tMailManager():New()
-
-	//Define se irá utilizar o TLS
-	If lUsaTLS
-		oSrv:SetUseTLS(.T.)
-	EndIf
-	nRet := oSrv:Init("", _cSMTPServer, _cAccount, _cPassword, 0, nPort)
-	If nRet != 0
-		cLog += "004 - Nao foi possivel inicializar o servidor SMTP: " + oSrv:GetErrorString(nRet) + CRLF
-		lRet := .F.
-	EndIf
-	If lRet
-		//Define o time out
-		nRet := oSrv:SetSMTPTimeout(nTimeOut)
-		If nRet != 0
-			cLog += "005 - Nao foi possivel definir o TimeOut '"+cValToChar(nTimeOut)+"'" + CRLF
-		EndIf
-
-		//Conecta no servidor
-		nRet := oSrv:SMTPConnect()
-		If nRet <> 0
-			cLog += "006 - Nao foi possivel conectar no servidor SMTP: " + oSrv:GetErrorString(nRet) + CRLF
-			lRet := .F.
-		EndIf
-
-		If lRet
-			//Realiza a autenticação do usuário e senha
-			nRet := oSrv:SmtpAuth(cFrom, cPass)
-			If nRet <> 0
-				cLog += "007 - Nao foi possivel autenticar no servidor SMTP: " + oSrv:GetErrorString(nRet) + CRLF
-				lRet := .F.
-			EndIf
-
-			If lRet
-				//Envia a mensagem
-				nRet := oMsg:Send(oSrv)
-				If nRet <> 0
-					cLog += "008 - Nao foi possivel enviar a mensagem: " + oSrv:GetErrorString(nRet) + CRLF
-					lRet := .F.
-				EndIf
-			EndIf
-	
-			//Disconecta do servidor
-			nRet := oSrv:SMTPDisconnect()
-			If nRet <> 0
-				cLog += "009 - Nao foi possivel disconectar do servidor SMTP: " + oSrv:GetErrorString(nRet) + CRLF
-			EndIf
-			if lRet
-				exit
-			endif
-		EndIf
-	EndIf*/
+	EndIf	
 Next
-FErase(_pcArquivo)
+If !Empty(aAnexos)
+	if valtype(aAnexos)=='A'
+		for i=1 to len(aAnexos)
+			FErase(aAnexos[i])
+		next
+	else
+		FErase(_pcArquivo)
+	endif
+endif
 cLog += "ENVMAIL=> ***** Resultado de Envio "+IIf(_lEnviado,"T","F")+" / "+AllTrim(Str(_nTentativas))+" ***** "+AllTrim("DE:"+_pcOrigem)+"*"+AllTrim("P/:"+_pcDestino)+"*"+AllTrim("S:"+_pcSubject)
 If !Empty(cLog)
         cLog := "EnvMail - "+dToC(Date())+ " " + Time() + CRLF + ;
